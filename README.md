@@ -11,4 +11,3 @@
    - For MACD Strategy : python3 file_generator.py strategy=MACD symbol=SBIN n=1 from_date=01/01/2023 end_date=01/01/2024 (Note, here n does not matter)
    - For RSI Strategy : python3 file_generator.py strategy=RSI symbol=SBIN n=11 from_date=01/01/2023 end_date=01/01/2024
    - For ADX Strategy : python3 file_generator.py strategy=ADX symbol=SBIN n=11 from_date=01/01/2023 end_date=01/01/2024
-   - For Basic Strategy : python3 file_generator.py strategy=basic symbol=SBIN n=11 from_date=01/01/2023 end_date=01/01/2024
