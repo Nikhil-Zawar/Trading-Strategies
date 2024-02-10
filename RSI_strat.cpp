@@ -158,5 +158,6 @@ int main(){
     }else{
         cout<<"Python files generated successfully"<<endl;
     }
+    remove("stock_data.csv");
     return 0;
 }
