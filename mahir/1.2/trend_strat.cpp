@@ -5,39 +5,65 @@
 #include <vector>
 #include <cmath>
 using namespace std;
-
-void strategize(int n, int x, int p)
-{
-    std::cout << "the strategy here" << endl;
-    ifstream file("trend_strat.csv");
-    if (!file.is_open())
-    {
-        std::cout << "Error opening file" << endl;
+string format_date(string date){
+    // 2022-11-30
+    string new_date="";
+    string temp = "";
+    //new format = dd/mm/yyyy
+    for(int i=date.size()-1 ; i>=0; i--){
+        if(date[i] == '-'){
+            int num = stoi(temp);
+            new_date = new_date + temp + "/";
+            temp = "";
+        }else{
+            temp = date[i] + temp;
+        }
+    }
+    new_date = new_date + temp;
+    return new_date;
+}
+void csv_parser(string file_name, vector<string> &dates, vector<float> &prices){
+    ifstream file(file_name);
+    if(!file.is_open()){
+        cout<<"Error opening the "<<file_name<<" file"<<endl;
         return;
     }
     string line;
-    vector<vector<string>> data;
-    vector<string> col1;
-    vector<string> col2;
-    getline(file, line); // ignore first line
-    while (getline(file, line))
-    {
+    getline(file, line);
+    while(getline(file, line)){
         stringstream ss(line);
         string cell;
-        getline(ss, cell, ','); // ignore first word
+        getline(ss, cell, ',');
 
         getline(ss, cell, ','); // take first word (date)
-        col1.push_back(cell);
+        dates.push_back(format_date(cell));
 
         getline(ss, cell, ',');
-        col2.push_back(cell); // take second word (close price)
+        prices.push_back(stof(cell)); // take second word (close price)
     }
-    data.push_back(col1);
-    data.push_back(col2);
     file.close();
+}
+void strategize(int n, int x, int p)
+{
+    std::cout << "the strategy here" << endl;
+    vector<string> dates;
+    vector<float> prices;
+    csv_parser("trend_strat.csv", dates, prices);
+
     ofstream file3("daily_cashflow.csv");
     ofstream file2("order_statistics.csv");
+    ofstream file4("final_pnl.txt");
     if (!file2.is_open())
+    {
+        std::cerr << "Error opening file" << std::endl;
+        return;
+    }
+    if (!file3.is_open())
+    {
+        std::cerr << "Error opening file" << std::endl;
+        return;
+    }
+    if (!file4.is_open())
     {
         std::cerr << "Error opening file" << std::endl;
         return;
@@ -46,10 +72,10 @@ void strategize(int n, int x, int p)
     file3 << "Date,Cashflow" << endl;
     float balance = 0;
     int position = 0;
-    for (int i = n - 1; i < data[0].size(); i++)
+    for (int i = n - 1; i < dates.size(); i++)
     {
 
-        string currdate = data[0][i];
+        string currdate = dates[i];
         vector<float> tempData;                 // vector containing prices of last n days
         float avgData = 0;                      // double for calculating average
         int z = 0;
@@ -60,11 +86,11 @@ void strategize(int n, int x, int p)
             {
                 break;
             }
-            if (data[0][i + j] == "")
+            if (dates[i + j] == "")
             {
                 continue;
             }
-            tempData.push_back(std::stof(data[1][i + j]));
+            tempData.push_back(prices[i + j]);
             avgData += tempData[-j];
             z++;
         }
@@ -76,7 +102,7 @@ void strategize(int n, int x, int p)
         }
         stDev = stDev / 5;
         stDev = sqrt(stDev);
-        float diff = std::stof(data[1][i]) - avgData - p * stDev;   
+        float diff = prices[i] - avgData - p * stDev;   
 
         if (diff >= 0)                                                  // condition for buying
         {
@@ -86,15 +112,15 @@ void strategize(int n, int x, int p)
                 continue;
                 ;
             }
-            string line = currdate + ",BUY,1," + data[1][i];
+            string line = currdate + ",BUY,1," + to_string(prices[i]);
             file2 << line << endl;
-            balance -= stof(data[1][i]);
+            balance -= prices[i];
             file3 << currdate << "," << balance << endl;
             position++;
             continue;
         }
 
-        diff = avgData - std::stof(data[1][i]) - p * stDev;
+        diff = avgData - prices[i] - p * stDev;
         if (diff >= 0)                                                  // condition for selling
         {
             if (position <= -x)                                         // position limit
@@ -102,18 +128,33 @@ void strategize(int n, int x, int p)
                 file3 << currdate << "," << balance << endl;
                 continue;
             }
-            string line = currdate + ",SELL,1," + data[1][i];
+            string line = currdate + ",SELL,1," + to_string(prices[i]);
             file2 << line << endl;
-            balance += stof(data[1][i]);
+            balance += prices[i];
             file3 << currdate << "," << balance << endl;
             position--;
             continue;
         }
         file3 << currdate << "," << balance << endl;                    // if no buying or selling
     }
+    balance = balance + position * (prices.back());
 
+    if (balance < 0)
+    {
+        file4 << "Loss : " << balance << endl;
+    }
+    else if (balance > 0)
+    {
+        file4 << "Profit: " << balance << endl;
+    }
+    else
+    {
+        file4 << "No profit or loss" << endl;
+    }
     file2.close();
     file3.close();
+    file4.close();
+
 }
 
 int main()
@@ -121,7 +162,7 @@ int main()
     int n = 5;
     int x = 3;
     int p = 1;
-    const char *file_command = "python3 trend_strat.py SBIN 5 8 2 01/01/2023 01/01/2024";
+    const char *file_command = "python3 trend_strat.py symbol=SBIN n=15 x=8 p=2 from_date=01/01/2024 to_date=06/02/2024";
     int files_generated = system(file_command);
     if (file_command == 0)
     {
@@ -131,6 +172,6 @@ int main()
     {
         strategize(n, x, p);
     }
-    remove("trend_strat.csv");
+    // remove("trend_strat.csv");
     return 0;
 }
