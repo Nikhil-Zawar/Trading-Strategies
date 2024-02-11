@@ -48,7 +48,7 @@ void strategize(int n, int x, int p)
     std::cout << "the strategy here" << endl;
     vector<string> dates;
     vector<float> prices;
-    csv_parser("trend_strat.csv", dates, prices);
+    csv_parser("stock_data.csv", dates, prices);
 
     ofstream file3("daily_cashflow.csv");
     ofstream file2("order_statistics.csv");

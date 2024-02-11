@@ -37,7 +37,7 @@ def gen_files(symbol, n, start_date, end_date):
     df = df.iloc[::-1]
     df2 = df2.iloc[::-1]
     df = pd.concat([df2,df],ignore_index=True)
-    df.to_csv('trend_strat.csv')
+    df.to_csv('stock_data.csv')
 
 
 gen_files(symbol, n, from_date, to_date)
