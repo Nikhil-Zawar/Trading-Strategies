@@ -244,6 +244,7 @@ void strategize_Advanced_DMA(int n, int x, float p, float c1, float c2, int max_
     file2.close();
     file3.close();
     file4.close();
+    remove("stock_data.csv")
 }
 
 // int main(){
