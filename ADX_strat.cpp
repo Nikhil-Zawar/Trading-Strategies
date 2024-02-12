@@ -90,13 +90,13 @@ float dx_calc(float di_plus, float di_minus, vector<bool> &can_trade){
     return dx;
 }
 
-void strategize(int n, int x, float adx_threshold, string start_date, string end_date){
+void strategize_ADX(int n, int x, float adx_threshold, string start_date, string end_date){
     vector<string> dates;
     vector<float> prices;
     vector<float> highs;
     vector<float> lows;
     vector<float> prev_close;
-    csv_parser("stock_data.csv", dates, prices, highs, lows, prev_close);
+    csv_parser("ADX_stock_data.csv", dates, prices, highs, lows, prev_close);
 
     float tr=0;
     float dm_plus = max_calc(highs[1], highs[0]);
@@ -181,23 +181,4 @@ void strategize(int n, int x, float adx_threshold, string start_date, string end
     stats_file.close();
     cashflow_file.close();
     cout<<"Strategy implementation complete"<<endl;
-}
-
-int main(){
-    int n = 14;
-    int x = 3;
-    float adx_threshold = 25;
-    string from_date = "01/01/2023";
-    string to_date = "01/01/2024";
-    //note that we have to pass n+1 to the python file, as we will need one more day's data to calc DM+ at t=0
-    const char* command = "python3 file_generator.py strategy=ADX symbol=SBIN n=15 from_date=01/01/2023 to_date=01/01/2024";
-    int files_generated = system(command);
-    if(files_generated == 0){
-        cout<<"Failed to generate files using python"<<endl;
-    }else{
-        cout<<"Python files generated successfully"<<endl;
-    }
-    strategize(n,x,adx_threshold,from_date, to_date);
-    remove("stock_data.csv");
-    return 0;
 }

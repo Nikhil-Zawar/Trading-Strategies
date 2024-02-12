@@ -56,11 +56,11 @@ vector<double> ewm_calc(vector<double> data, double alpha){
     return ewms;
 }
 
-void strategize(int x, string start_date, string end_date){
+void strategize_MACD(int x, string start_date, string end_date){
     vector<string> short_dates, long_dates;
     vector<double> short_prices, long_prices;
-    csv_parser("short_stock_data.csv", short_dates, short_prices);
-    csv_parser("long_stock_data.csv", long_dates, long_prices);
+    csv_parser("MACD_short_stock_data.csv", short_dates, short_prices);
+    csv_parser("MACD_long_stock_data.csv", long_dates, long_prices);
 
 //Here i need to know from where does the data start with the start_date
     double a1 = 2.0/13;
@@ -125,20 +125,6 @@ void strategize(int x, string start_date, string end_date){
     stats_file.close();
     cashflow_file.close();
     cout<<"Strategy implementation complete"<<endl;
-}
-
-int main(){
-    const char* file_command = "python3 file_generator.py strategy=MACD symbol=SBIN n=1 from_date=01/01/2023 to_date=01/01/2024";
-    int files_generated = system(file_command);
-    strategize(4,"01/01/2023", "01/01/2024");
-    if(files_generated == 0){
-        cout<<"Failed to generate files using python"<<endl;
-    }else{
-        cout<<"Python files generated successfully"<<endl;
-    }
-    remove("short_stock_data.csv");
-    remove("long_stock_data.csv");
-    return 0;
 }
 
 

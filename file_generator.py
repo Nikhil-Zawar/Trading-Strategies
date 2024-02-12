@@ -5,9 +5,6 @@ import pandas as pd
 from dateutil.relativedelta import relativedelta
 from jugaad_data.nse import NSELive
 
-# Python file for generating data files across all the strategies
-
-# "python3 ADX_strat_files.py strategy=ADX symbol=SBIN n=15 from_date=04/01/2023 to_date=01/01/2024";
 strategy = sys.argv[1][9:]
 sym = sys.argv[2][7:]
 n = sys.argv[3][2:]

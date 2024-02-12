@@ -49,7 +49,7 @@ csv_row_elements parse_row_of_csv(string &line){
 }
 
 vector<csv_row_elements> all_data(){
-    ifstream file("stock_data.csv");
+    ifstream file("BASIC_stock_data.csv");
     vector<csv_row_elements> rows;
     if(!file.is_open()){
         std::cerr<<"Error Opening CSV file for stock data"<<endl;
@@ -100,7 +100,7 @@ void write_cashflow(vector<transaction> order_stats, string from_date, string en
     }
 }
 
-void strategize(int n, int x){
+void strategize_BASIC(int n, int x){
     vector<csv_row_elements> data = all_data();
     vector<transaction> order_stats;
     int num_days = (data.size()/n);
@@ -165,15 +165,4 @@ void strategize(int n, int x){
         }
     }
     write_order_stat(order_stats);
-}
-
-int main(){
-    const char* file_command = "python3 file_generator.py strategy=basic symbol=SBIN n=11 from_date=01/01/2023 to_date=01/01/2024";
-    int files_generated = system(file_command);
-    if(files_generated == 0){
-        cout<<"Failed : file generation did not happen from the python file";
-    }else{
-        strategize(5,2);
-    }
-    return 0;
 }

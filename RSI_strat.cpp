@@ -77,10 +77,10 @@ float loss(float p, float q){
     }
 }
 
-void strategize(int n, int x, string start_date, string end_date, float overbought_threshold, float oversold_threshold){
+void strategize_RSI(int n, int x, float overbought_threshold, float oversold_threshold, string start_date, string end_date){
     vector<string> dates;
     vector<float> prices;
-    csv_parser("stock_data.csv", dates, prices);
+    csv_parser("RSI_stock_data.csv", dates, prices);
 
     //calculate where in the long_date range , does the first element of short_date comes
     float gains_sum =0;
@@ -146,18 +146,4 @@ void strategize(int n, int x, string start_date, string end_date, float overboug
     stats_file.close();
     cashflow_file.close();
     cout<<"Strategy implementation complete"<<endl;
-}
-
-int main(){
-    const char* command = "python3 file_generator.py strategy=RSI symbol=SBIN n=14 from_date=01/01/2023 to_date=01/01/2024";
-    int files_generated = system(command);
-    //constrant - overbought_threshold >= oversold_threshold
-    strategize(14,3,"01/01/2023","01/01/2024", 1000, 600);
-    if(files_generated == 0){
-        cout<<"Failed to generate files using python"<<endl;
-    }else{
-        cout<<"Python files generated successfully"<<endl;
-    }
-    remove("stock_data.csv");
-    return 0;
 }
