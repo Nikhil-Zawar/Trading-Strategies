@@ -74,18 +74,17 @@ void strategize_Advanced_DMA(int n, int x, float p, float c1, float c2, int max_
     int position = 0;
     vector<pair<int, int>> holdings;
 
-    float diff1;                // condition for buying
-    float diff2;                // condition for selling
+    int day = 0;
+    float diff1; // condition for buying
+    float diff2; // condition for selling
+    bool direct;
 
     float SF;                    // smoothening factor
     float AM;                      
     for (int i = n; i < dates.size(); i++)
     {
+        day++;
         string currdate = dates[i];
-        for (int j = 0; j < holdings.size(); j++)
-        {
-            holdings[j].first += 1;                          // increasing day for each holding
-        }
         if (i == n)
         {
             SF = 0.5;
@@ -112,44 +111,71 @@ void strategize_Advanced_DMA(int n, int x, float p, float c1, float c2, int max_
             }
             else                                                    // when deno is 0 then check for max hold days and then 
             {
-                if (holdings.size() > 0 && holdings[0].first >= max_hold_days)
+                if (holdings.size() > 0 && holdings[0].first >= day)
                 {
-                    if (holdings[0].second == 1)
+                    direct = true;
+                    if (holdings[0].second == 1) // sell
+                    {
+                        diff2 = 10;
+                        diff1 = -1;
+                    }
+                    else // buy
+                    {
+                        diff1 = 10;
+                        diff2 = -1;
+                    }
+                }
+            }
+        }
+
+        if (direct !=true)
+        {
+            diff1 = prices[i] - (1 + p / 100) * AM; // for buying
+            diff2 = (1 - p / 100) * AM - prices[i]; /// for selling
+
+            if (holdings.size() > 0 && holdings[0].first >= day)
+            {
+                if (holdings[0].second == 1)
+                {
+                    if (diff1 < 0)
                     {
                         diff2 = 10;
                     }
+                    else if (position >= x)
+                    {
+                        diff2 = 10;
+                        diff1 = -1;
+                    }
                     else
                     {
+                        diff1 = -1;
+                        holdings.erase(holdings.begin());
+                        holdings.push_back({day + max_hold_days, 1});
+                    }
+                }
+                else
+                {
+                    if (diff2 < 0)
+                    {
                         diff1 = 10;
+                    }
+                    else if (position <= -x)
+                    {
+                        diff1 = 10;
+                        diff2 = -1;
+                    }
+                    else
+                    {
+                        diff2 = -1;
+                        holdings.erase(holdings.begin());
+                        holdings.push_back({day + max_hold_days, -1});
                     }
                 }
             }
         }
-
-        diff1 = prices[i] - (1 + p / 100) * AM; // for buying
-        diff2 = (1 - p / 100) * AM - prices[i]; /// for selling
-
-        if (holdings.size() > 0 && holdings[0].first >= max_hold_days)
-        {
-            // cout << currdate << " "<< "here" << endl;
-            if (holdings[0].second == 1)
-            {
-                if (diff1 < 0 || position >= x)
-                {
-                    diff2 = 10;
-                }
-            }
-            else
-            {
-                if (diff2 < 0 || position <= -x)
-                {
-                    diff1 = 10;
-                }
-            }
-        }
-
         if (diff1 >= 0) // condition for buying
         {
+            direct=false;
             if (position >= x) // position limit
             {
                 file3 << currdate << "," << balance << endl;
@@ -158,7 +184,7 @@ void strategize_Advanced_DMA(int n, int x, float p, float c1, float c2, int max_
             }
             if (holdings.size() == 0 || holdings[0].second != -1)
             {
-                holdings.push_back({0, 1});
+                holdings.push_back({day + max_hold_days, 1});
             }
             else
             {
@@ -175,6 +201,7 @@ void strategize_Advanced_DMA(int n, int x, float p, float c1, float c2, int max_
 
         if (diff2 >= 0) // condition for selling
         {
+            direct=false;
             if (position <= -x) // position limit
             {
                 file3 << currdate << "," << balance << endl;
@@ -182,7 +209,7 @@ void strategize_Advanced_DMA(int n, int x, float p, float c1, float c2, int max_
             }
             if (holdings.size() == 0 || holdings[0].second != 1)
             {
-                holdings.push_back({0, -1});
+                holdings.push_back({day + max_hold_days, -1});
             }
             else
             {
