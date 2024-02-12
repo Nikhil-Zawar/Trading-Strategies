@@ -43,7 +43,7 @@ void csv_parser(string file_name, vector<string> &dates, vector<float> &prices){
     }
     file.close();
 }
-void strategize(int n, int x, float p, float c1, float c2, int max_hold_days)
+float strategize(int n, int x, float p, float c1, float c2, int max_hold_days)
 {
     std::cout << "the strategy here" << endl;
     vector<string> dates;
@@ -217,6 +217,7 @@ void strategize(int n, int x, float p, float c1, float c2, int max_hold_days)
     file2.close();
     file3.close();
     file4.close();
+    return balance;
 }
 
 int main()
