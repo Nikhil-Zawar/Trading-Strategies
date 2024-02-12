@@ -155,6 +155,7 @@ void strategize_DMA(int n, int x, int p)
     file2.close();
     file3.close();
     file4.close();
+    remove("stock_data.csv")
 
 }
 
