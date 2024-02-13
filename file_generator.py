@@ -5,6 +5,8 @@ import pandas as pd
 from dateutil.relativedelta import relativedelta
 from jugaad_data.nse import NSELive
 
+    # string comm = "python3 file_generator.py strategy=MACD symbol="+symbol+" n="+to_string(0)+" from_date="+from_date+" to_date="+to_date;
+
 strategy = sys.argv[1][9:]
 sym = sys.argv[2][7:]
 n = sys.argv[3][2:]
@@ -32,6 +34,8 @@ def get_series(symbol):
     series = q['series']
     return series
 
+#  Strategy can be = "ADX","RSI","MACD","DMA","LR","BASIC","BEST","Advanced_DMA"
+
 def generate_files(symbol, n, start_date, end_date, file_name, strategy):
     f = parse_date(start_date)
     t = parse_date(end_date)
@@ -55,9 +59,9 @@ def generate_files(symbol, n, start_date, end_date, file_name, strategy):
     df_main.to_csv(file_name)
 
 
-if strategy == "MACD":
-    generate_files(sym, 12, from_date, to_date, 'short_stock_data.csv', strategy)
-    generate_files(sym, 26, from_date, to_date, 'long_stock_data.csv', strategy)
-else:
-    generate_files(sym, n, from_date, to_date, 'stock_data.csv', strategy)
-
+# if strategy == "MACD":
+    # generate_files(sym, 0, from_date, to_date, 'MACD_stock_data.csv', strategy)
+    # generate_files(sym, 0, from_date, to_date, 'MACD_long_stock_data.csv', strategy)
+# else:
+file_name = strategy + "_stock_data.csv"
+generate_files(sym, n, from_date, to_date, file_name, strategy)

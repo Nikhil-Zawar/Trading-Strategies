@@ -1,86 +1,39 @@
-#include <iostream>
-#include <cstdlib>
-#include <fstream>
-#include <sstream>
-#include <vector>
-#include <cmath>
-using namespace std;
-string format_date(string date){
-    // 2022-11-30
-    string new_date="";
-    string temp = "";
-    //new format = dd/mm/yyyy
-    for(int i=date.size()-1 ; i>=0; i--){
-        if(date[i] == '-'){
-            int num = stoi(temp);
-            new_date = new_date + temp + "/";
-            temp = "";
-        }else{
-            temp = date[i] + temp;
-        }
-    }
-    new_date = new_date + temp;
-    return new_date;
-}
-void csv_parser(string file_name, vector<string> &dates, vector<float> &prices){
-    ifstream file(file_name);
-    if(!file.is_open()){
-        cout<<"Error opening the "<<file_name<<" file"<<endl;
-        return;
-    }
-    string line;
-    getline(file, line);
-    while(getline(file, line)){
-        stringstream ss(line);
-        string cell;
-        getline(ss, cell, ',');
+#include"base.h"
 
-        getline(ss, cell, ','); // take first word (date)
-        dates.push_back(format_date(cell));
-
-        getline(ss, cell, ',');
-        prices.push_back(stof(cell)); // take second word (close price)
-    }
-    file.close();
-}
-void strategize_Advanced_DMA(int n, int x, float p, float c1, float c2, int max_hold_days)
-{
+double strategize_Advanced_DMA(int n, int x, double p, double c1, double c2, int max_hold_days){
     std::cout << "the strategy here" << endl;
     vector<string> dates;
-    vector<float> prices;
+    vector<double> prices;
     csv_parser("Advanced_DMA_stock_data.csv", dates, prices);
 
     ofstream file3("daily_cashflow.csv");
     ofstream file2("order_statistics.csv");
     ofstream file4("final_pnl.txt");
-    if (!file2.is_open())
-    {
+    if (!file2.is_open()){
         std::cerr << "Error opening file" << std::endl;
-        return;
+        return 0;
     }
-    if (!file3.is_open())
-    {
+    if (!file3.is_open()){
         std::cerr << "Error opening file" << std::endl;
-        return;
+        return 0;
     }
-    if (!file4.is_open())
-    {
+    if (!file4.is_open()){
         std::cerr << "Error opening file" << std::endl;
-        return;
+        return 0;
     }
     file2 << "Date,Order_dir,Quantity,Price" << endl;
     file3 << "Date,Cashflow" << endl;
-    float balance = 0;
+    double balance = 0;
     int position = 0;
     vector<pair<int, int>> holdings;
 
     int day = 0;
-    float diff1; // condition for buying
-    float diff2; // condition for selling
+    double diff1; // condition for buying
+    double diff2; // condition for selling
     bool direct;
 
-    float SF;                    // smoothening factor
-    float AM;                      
+    double SF;                    // smoothening factor
+    double AM;                      
     for (int i = n; i < dates.size(); i++)
     {
         day++;
@@ -92,9 +45,9 @@ void strategize_Advanced_DMA(int n, int x, float p, float c1, float c2, int max_
         }
         else
         {
-            vector<float> tempData; // vector containing prices of last n days
-            float sumPriceChange = 0;
-            float changeInPrice = prices[i] - prices[i - n]; // change in price over last n days
+            vector<double> tempData; // vector containing prices of last n days
+            double sumPriceChange = 0;
+            double changeInPrice = prices[i] - prices[i - n]; // change in price over last n days
 
             for (int j = 0; j < n; j++) // storing the dates and the prices
             {
@@ -104,8 +57,8 @@ void strategize_Advanced_DMA(int n, int x, float p, float c1, float c2, int max_
             }
             if (sumPriceChange != 0)
             {                                                        // if denominator is not 0 then
-                float ER = changeInPrice / sumPriceChange;          // claculated Efficiency ratio
-                float temp = (2 * ER) / (1 + c2);
+                double ER = changeInPrice / sumPriceChange;          // claculated Efficiency ratio
+                double temp = (2 * ER) / (1 + c2);
                 SF = SF + c1 * ((temp - 1) / (temp + 1) - SF);
                 AM = AM + SF * ((prices[i]) - AM);
             }
@@ -244,26 +197,26 @@ void strategize_Advanced_DMA(int n, int x, float p, float c1, float c2, int max_
     file2.close();
     file3.close();
     file4.close();
-    remove("stock_data.csv")
+    return balance;
+}
+
+double Advanced_DMA_strategy(string symbol, int n, int x, double p, double c1, double c2, int max_hold_days, string from_date, string to_date){
+    string comm = "python3 file_generator.py strategy=Advanced_DMA symbol="+symbol+" n="+to_string(n)+" from_date="+from_date+" to_date="+to_date;
+    const char* command = comm.c_str();
+    double pnl =0;
+    int files_generated = system(command);
+    if(files_generated == -1){
+        cout<<"Failed to generate files using python"<<endl;
+    }else{
+        cout<<"File generation using python successful"<<endl;
+        pnl = strategize_Advanced_DMA(n, x, p, c1, c2, max_hold_days);
+    }
+    remove("Advanced_DMA_stock_data.csv");
+    return pnl;
 }
 
 // int main(){
-//     int n = 15;
-//     int x = 3;
-//     float p = 1;
-//     float c1 = 2;
-//     float c2 = 0.2;
-//     int max_hold_days = 1;
-//     const char *file_command = "python3 improved_DMA.py symbol=SBIN n=15 x=8 p=2 from_date=01/01/2024 to_date=06/02/2024";
-//     int files_generated = system(file_command);
-//     if (file_command == 0)
-//     {
-//         std::cout << "Failed : file generation did not happen from the python file";
-//     }
-//     else
-//     {
-//         strategize(n, x, p, c1, c2, max_hold_days);
-//     }
-//     // remove("trend_strat.csv");
+//     Advanced_DMA_strategy("SBIN",14, 5, 3, 2, 0.5, 7, "01/01/2023", "01/01/2024");
 //     return 0;
 // }
+

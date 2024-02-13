@@ -1,67 +1,6 @@
-#include<iostream>
-#include<cstdlib>
-#include<fstream>
-#include<sstream>
-#include<vector>
-#include<cmath>
-using namespace std;
+#include"base.h"
 
-string format_date(string date){
-    // 2022-11-30
-    string new_date="";
-    string temp = "";
-    //new format = dd/mm/yyyy
-    for(int i=date.size()-1 ; i>=0; i--){
-        if(date[i] == '-'){
-            int num = stoi(temp);
-            new_date = new_date + temp + "/";
-            temp = "";
-        }else{
-            temp = date[i] + temp;
-        }
-    }
-    new_date = new_date + temp;
-    return new_date;
-}
-
-void csv_parser(string file_name, vector<string> &dates, vector<float> &prices){
-    ifstream file(file_name);
-    if(!file.is_open()){
-        cout<<"Error opening the "<<file_name<<" file"<<endl;
-        return;
-    }
-    string line;
-    getline(file, line);
-    while(getline(file, line)){
-        stringstream ss(line);
-        string cell;
-        getline(ss, cell, ',');
-
-        getline(ss, cell, ','); // take first word (date)
-        dates.push_back(format_date(cell));
-
-        getline(ss, cell, ',');
-        prices.push_back(stof(cell)); // take second word (close price)
-    }
-    file.close();
-}
-
-/*
-RSI - Relative strength index
-average gain = (sum of Gain() for the last n days) / n
-Gain(ith day) = max(Price on ith day - Price on(i-1)th day,  0)
-Loss(ith day) = min(Price on ith day - Price on(i-1)th day,  0)
-
-RS = Avg Gain / Avg Loss
-RSI = 100 - (100/(1+RS))
-
-Decision - if(RSI < oversold_threshold) ---> then BUY
-           if(RSI > overbought_threshold) ---> then SELL
-
-make strategy=RSI symbol=SBIN x=3 n=14 oversold_threshold=30 overbought_threshold=70 start_date="a" end_date="b"
-*/
-
-float gain(float p, float q){
+double gain(double p, double q){
     if(p>q){
         return p-q;
     }else{
@@ -69,7 +8,7 @@ float gain(float p, float q){
     }
 }
 
-float loss(float p, float q){
+double loss(double p, double q){
     if(p<q){
         return p-q;
     }else{
@@ -77,19 +16,19 @@ float loss(float p, float q){
     }
 }
 
-void strategize_RSI(int n, int x, float overbought_threshold, float oversold_threshold, string start_date, string end_date){
+double strategize_RSI(int n, int x, double overbought_threshold, double oversold_threshold, string start_date, string end_date){
     vector<string> dates;
-    vector<float> prices;
+    vector<double> prices;
     csv_parser("RSI_stock_data.csv", dates, prices);
 
     //calculate where in the long_date range , does the first element of short_date comes
-    float gains_sum =0;
-    float avg_gain = 0;
-    float loss_sum =0;
-    float avg_loss =0;
-    float rs = 0;
-    float rsi = 0;
-    vector<float> rsi_store;
+    double gains_sum =0;
+    double avg_gain = 0;
+    double loss_sum =0;
+    double avg_loss =0;
+    double rs = 0;
+    double rsi = 0;
+    vector<double> rsi_store;
     // rsi.push_back(0);
     // in dates -- 0 to (n-1) index will be data not within our start_date range
     // start_date or the trading day just after start_date will be at index n.
@@ -108,17 +47,16 @@ void strategize_RSI(int n, int x, float overbought_threshold, float oversold_thr
         rsi = 100 - (100/(1+rs));
         rsi_store.push_back(rsi);
     }
-    cout<<rsi_store.size()<<endl;
 
 
     ofstream stats_file("order_statistics.csv");
     ofstream cashflow_file("daily_cashflow.csv");
-    if(!stats_file.is_open()){cout<<"Order stats not created"<<endl; return;}
-    if(!cashflow_file.is_open()){cout<<"Cashflow not created"<<endl; return;}
+    if(!stats_file.is_open()){cout<<"Order stats not created"<<endl; return 0;}
+    if(!cashflow_file.is_open()){cout<<"Cashflow not created"<<endl; return 0;}
     stats_file << "Date,Order_dir,Quantity,Price"<<endl;
     cashflow_file<<"Date,Cashflow"<<endl;
 
-    float balance = 0;
+    double balance = 0;
     int position = 0;
     for(int i=n; i<dates.size(); i++){
         if(rsi_store[i-n] > overbought_threshold && position > ((-1)*x)){
@@ -143,7 +81,40 @@ void strategize_RSI(int n, int x, float overbought_threshold, float oversold_thr
             cashflow_file << c << endl; 
         }
     }
+
+    ofstream txt_file("final_pnl.txt");
+    if(!txt_file.is_open()){cout<<"Text File not created"<<endl; return 0;}
+    balance = balance + position * (prices.back());
+    if (balance < 0){
+        txt_file << "Loss : " << balance << endl;
+    }else if (balance > 0){
+        txt_file << "Profit: " << balance << endl;
+    }else{
+        txt_file << "No profit or loss" << endl;
+    }
+    txt_file.close();
     stats_file.close();
     cashflow_file.close();
     cout<<"Strategy implementation complete"<<endl;
+    return balance;
 }
+
+double RSI_strategy(string symbol, int n, int x, double overbought_threshold, double oversold_threshold, string from_date, string to_date){
+    string comm = "python3 file_generator.py strategy=RSI symbol="+symbol+" n="+to_string(n)+" from_date="+from_date+" to_date="+to_date;
+    const char* command = comm.c_str();
+    double pnl =0;
+    int files_generated = system(command);
+    if(files_generated == -1){
+        cout<<"Failed to generate files using python"<<endl;
+    }else{
+        cout<<"File generation using python successful"<<endl;
+        pnl = strategize_RSI(n, x, overbought_threshold, oversold_threshold, from_date, to_date);
+    }
+    remove("RSI_stock_data.csv");
+    return pnl;
+}
+
+// int main(){
+//     RSI_strategy("SBIN", 10, 5, 25, 10, "01/01/2023", "01/01/2024");
+//     return 0;
+// }

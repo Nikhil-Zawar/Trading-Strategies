@@ -1,64 +1,9 @@
-#include<iostream>
-#include<cstdlib>
-#include<fstream>
-#include<sstream>
-#include<vector>
-#include<cmath>
-using namespace std;
+#include"base.h"
 
-string format_date(string date){
-    // 2022-11-30
-    string new_date="";
-    string temp = "";
-    //new format = dd/mm/yyyy
-    for(int i=date.size()-1 ; i>=0; i--){
-        if(date[i] == '-'){
-            int num = stoi(temp);
-            new_date = new_date + temp + "/";
-            temp = "";
-        }else{
-            temp = date[i] + temp;
-        }
-    }
-    new_date = new_date + temp;
-    return new_date;
-}
-
-void csv_parser(string file_name, vector<string> &dates, vector<float> &prices, vector<float> &highs, vector<float> &lows, vector<float> &prev_close){
-    ifstream file(file_name);
-    if(!file.is_open()){
-        cout<<"Error opening the "<<file_name<<" file"<<endl;
-        return;
-    }
-    string line;
-    getline(file, line);
-    while(getline(file, line)){
-        stringstream ss(line);
-        string cell;
-        getline(ss, cell, ',');
-
-        getline(ss, cell, ','); // take first word (date)
-        dates.push_back(format_date(cell));
-
-        getline(ss, cell, ',');
-        prices.push_back(stof(cell)); // take second word -- close
-
-        getline(ss, cell, ',');
-        highs.push_back(stof(cell)); // take third word -- high
-        
-        getline(ss, cell, ',');
-        lows.push_back(stof(cell)); // take fourth word -- low
-        
-        getline(ss, cell, ',');
-        prev_close.push_back(stof(cell)); // take fifth word -- prev_close
-    }
-    file.close();
-}
-
-float calc_TR(float high, float low, float prev_close){
-    float a = high - low;
-    float b = high - prev_close;
-    float c = low - prev_close;
+double calc_TR(double high, double low, double prev_close){
+    double a = high - low;
+    double b = high - prev_close;
+    double c = low - prev_close;
     if(a>b){
         if(a>c){
             return a; //a>b, a>c
@@ -75,32 +20,32 @@ float calc_TR(float high, float low, float prev_close){
     }
 }
 
-float max_calc(float a, float b){
+double max_calc(double a, double b){
     if (a>b){return a;}
     else{return 0;}
 }
 
-float dx_calc(float di_plus, float di_minus, vector<bool> &can_trade){
+double dx_calc(double di_plus, double di_minus, vector<bool> &can_trade){
     if(di_plus == 0 && di_minus == 0){
         can_trade.push_back(false);
         return 0;
     }
     can_trade.push_back(true);
-    float dx = 100*(abs(di_plus - di_minus))/(di_plus + di_minus);
+    double dx = 100*(abs(di_plus - di_minus))/(di_plus + di_minus);
     return dx;
 }
 
-void strategize_ADX(int n, int x, float adx_threshold, string start_date, string end_date){
+double strategize_ADX(int n, int x, double adx_threshold, string start_date, string end_date){
     vector<string> dates;
-    vector<float> prices;
-    vector<float> highs;
-    vector<float> lows;
-    vector<float> prev_close;
-    csv_parser("ADX_stock_data.csv", dates, prices, highs, lows, prev_close);
+    vector<double> prices;
+    vector<double> highs;
+    vector<double> lows;
+    vector<double> prev_close;
+    csv_parser_ADX("ADX_stock_data.csv", dates, prices, highs, lows, prev_close);
 
-    float tr=0;
-    float dm_plus = max_calc(highs[1], highs[0]);
-    float dm_minus = max_calc(lows[1], lows[0]);
+    double tr=0;
+    double dm_plus = max_calc(highs[1], highs[0]);
+    double dm_minus = max_calc(lows[1], lows[0]);
 
     dates.erase(dates.begin(), dates.begin()+1);
     prices.erase(prices.begin(), prices.begin()+1);
@@ -108,14 +53,14 @@ void strategize_ADX(int n, int x, float adx_threshold, string start_date, string
     lows.erase(lows.begin(), lows.begin()+1);
     prev_close.erase(prev_close.begin(), prev_close.begin()+1);
     
-    float a1 = 2.0/(n+1);
-    vector<float> atr_values;
-    float di_plus=0;
-    float di_minus=0;
-    float dx = 0;
-    float adx =0 ;
-    float atr =0 ;
-    vector<float> adx_values;
+    double a1 = 2.0/(n+1);
+    vector<double> atr_values;
+    double di_plus=0;
+    double di_minus=0;
+    double dx = 0;
+    double adx =0 ;
+    double atr =0 ;
+    vector<double> adx_values;
     vector<bool> can_trade;
 
     for(int i=0;i<dates.size();i++){
@@ -147,12 +92,12 @@ void strategize_ADX(int n, int x, float adx_threshold, string start_date, string
 
     ofstream stats_file("order_statistics.csv");
     ofstream cashflow_file("daily_cashflow.csv");
-    if(!stats_file.is_open()){cout<<"Order stats not created"<<endl; return;}
-    if(!cashflow_file.is_open()){cout<<"Cashflow not created"<<endl; return;}
+    if(!stats_file.is_open()){cout<<"Order stats not created"<<endl; return 0;}
+    if(!cashflow_file.is_open()){cout<<"Cashflow not created"<<endl; return 0;}
     stats_file << "Date,Order_dir,Quantity,Price"<<endl;
     cashflow_file<<"Date,Cashflow"<<endl;
 
-    float balance = 0;
+    double balance = 0;
     int position = 0;
 
     for(int i=0; i<dates.size(); i++){
@@ -178,7 +123,39 @@ void strategize_ADX(int n, int x, float adx_threshold, string start_date, string
             cashflow_file << c << endl;
         }
     }
+    ofstream txt_file("final_pnl.txt");
+    if(!txt_file.is_open()){cout<<"Text File not created"<<endl; return 0;}
+    balance = balance + position * (prices.back());
+    if (balance < 0){
+        txt_file << "Loss : " << balance << endl;
+    }else if (balance > 0){
+        txt_file << "Profit: " << balance << endl;
+    }else{
+        txt_file << "No profit or loss" << endl;
+    }
+    txt_file.close();
     stats_file.close();
     cashflow_file.close();
     cout<<"Strategy implementation complete"<<endl;
+    return balance;
 }
+
+double ADX_strategy(string symbol, int n, int x, double adx_threshold, string from_date, string to_date){
+    string comm = "python3 file_generator.py strategy=ADX symbol="+symbol+" n="+to_string(n)+" from_date="+from_date+" to_date="+to_date;
+    const char* command = comm.c_str();
+    double pnl=0;
+    int files_generated = system(command);
+    if(files_generated == -1){
+        cout<<"Failed to generate files using python"<<endl;
+    }else{
+        cout<<"File generation using python successful"<<endl;
+        pnl = strategize_ADX(n, x, adx_threshold, from_date, to_date);
+    }
+    remove("ADX_stock_data.csv");
+    return pnl;
+}
+
+// int main(){
+//     ADX_strategy("SBIN",14, 5, 40, "01/01/2023","01/01/2024");
+//     return 0;
+// }

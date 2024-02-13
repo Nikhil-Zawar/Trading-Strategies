@@ -1,50 +1,4 @@
-#include<iostream>
-#include<cstdlib>
-#include<fstream>
-#include<sstream>
-#include<vector>
-#include<cmath>
-using namespace std;
-
-string format_date(string date){
-    // 2022-11-30
-    string new_date="";
-    string temp = "";
-    //new format = dd/mm/yyyy
-    for(int i=date.size()-1 ; i>=0; i--){
-        if(date[i] == '-'){
-            int num = stoi(temp);
-            new_date = new_date + temp + "/";
-            temp = "";
-        }else{
-            temp = date[i] + temp;
-        }
-    }
-    new_date = new_date + temp;
-    return new_date;
-}
-
-void csv_parser(string file_name, vector<string> &dates, vector<double> &prices){
-    ifstream file(file_name);
-    if(!file.is_open()){
-        cout<<"Error opening the "<<file_name<<" file"<<endl;
-        return;
-    }
-    string line;
-    getline(file, line);
-    while(getline(file, line)){
-        stringstream ss(line);
-        string cell;
-        getline(ss, cell, ',');
-
-        getline(ss, cell, ','); // take first word (date)
-        dates.push_back(format_date(cell));
-
-        getline(ss, cell, ',');
-        prices.push_back(stod(cell)); // take second word (close price)
-    }
-    file.close();
-}
+#include"base.h"
 
 vector<double> ewm_calc(vector<double> data, double alpha){
     vector<double> ewms;
@@ -56,76 +10,94 @@ vector<double> ewm_calc(vector<double> data, double alpha){
     return ewms;
 }
 
-void strategize_MACD(int x, string start_date, string end_date){
-    vector<string> short_dates, long_dates;
-    vector<double> short_prices, long_prices;
-    csv_parser("MACD_short_stock_data.csv", short_dates, short_prices);
-    csv_parser("MACD_long_stock_data.csv", long_dates, long_prices);
+double strategize_MACD(int x, string start_date, string end_date){
+    vector<string> dates;
+    vector<double> prices;
+    csv_parser("MACD_stock_data.csv", dates, prices);
+    dates.erase(dates.begin());
+    prices.erase(prices.begin());
 
-//Here i need to know from where does the data start with the start_date
     double a1 = 2.0/13;
-    vector<double> short_EWM = ewm_calc(short_prices, a1);
+    vector<double> short_EWM = ewm_calc(prices, a1);
     double a2 = 2.0/27;
-    vector<double> long_EWM = ewm_calc(long_prices, a2);
-
-    //calculate where in the long_date range , does the first element of short_date comes
-    int short_long =0;
-    while(short_dates[0] != long_dates[short_long]){
-        short_long++;
-    }
-    long_EWM.erase(long_EWM.begin(), long_EWM.begin() + short_long);
+    vector<double> long_EWM = ewm_calc(prices, a2);
 
     vector<double> MACD;
     for(int i=0; i<short_EWM.size();i++){
         double value = short_EWM[i] - long_EWM[i];
         MACD.push_back(value);
     }
-    MACD.erase(MACD.begin(), MACD.begin()+3);
+
     double a3 = 2.0/10;
     vector<double> signals = ewm_calc(MACD, a3);
 
-    MACD.erase(MACD.begin(), MACD.begin()+9);
-    signals.erase(signals.begin(), signals.begin()+9);
-
     ofstream stats_file("order_statistics.csv");
     ofstream cashflow_file("daily_cashflow.csv");
-    if(!stats_file.is_open()){cout<<"Order stats not created"<<endl; return;}
-    if(!cashflow_file.is_open()){cout<<"Cashflow not created"<<endl; return;}
+    if(!stats_file.is_open()){cout<<"Order stats not created"<<endl; return 0;}
+    if(!cashflow_file.is_open()){cout<<"Cashflow not created"<<endl; return 0;}
     stats_file << "Date,Order_dir,Quantity,Price"<<endl;
     cashflow_file<<"Date,Cashflow"<<endl;
 
     float balance = 0;
     int position = 0;
-    short_dates.erase(short_dates.begin(), short_dates.begin()+12);
-    short_prices.erase(short_prices.begin(), short_prices.begin()+12);
 
     for(int i=0; i<MACD.size(); i++){
         // if(position < x && position > ((-1)*x)){
         if(MACD[i] > signals[i] && position < x){
             //BUY share
-            string s = short_dates[i] + ",BUY,1," + to_string(short_prices[i]);
+            string s = dates[i] + ",BUY,1," + to_string(prices[i]);
             stats_file << s << endl;
-            balance = balance - short_prices[i];
-            string c = short_dates[i] + "," + to_string(balance);
+            balance = balance - prices[i];
+            string c = dates[i] + "," + to_string(balance);
             cashflow_file << c << endl;
             position++;
         }else if (MACD[i] < signals[i] && position > ((-1)*x)){
             //SELL share
-            string s = short_dates[i] + ",SELL,1," + to_string(short_prices[i]);
+            string s = dates[i] + ",SELL,1," + to_string(prices[i]);
             stats_file<< s << endl;
-            balance = balance + long_prices[i];
-            string c = short_dates[i] + "," + to_string(balance);
+            balance = balance + prices[i];
+            string c = dates[i] + "," + to_string(balance);
             cashflow_file << c << endl;
             position--;
         }else{
-            string c = short_dates[i] + "," + to_string(balance);
+            string c = dates[i] + "," + to_string(balance);
             cashflow_file << c << endl;    
         }
     }
+
+    ofstream txt_file("final_pnl.txt");
+    if(!txt_file.is_open()){cout<<"Text File not created"<<endl; return 0;}
+    balance = balance + position * (prices.back());
+    if (balance < 0){
+        txt_file << "Loss : " << balance << endl;
+    }else if (balance > 0){
+        txt_file << "Profit: " << balance << endl;
+    }else{
+        txt_file << "No profit or loss" << endl;
+    }
+    txt_file.close();
     stats_file.close();
     cashflow_file.close();
     cout<<"Strategy implementation complete"<<endl;
+    return balance;
 }
 
+double MACD_strategy(string symbol, int x, string from_date, string to_date){
+    string comm = "python3 file_generator.py strategy=MACD symbol="+symbol+" n="+to_string(1)+" from_date="+from_date+" to_date="+to_date;
+    const char* command = comm.c_str();
+    double pnl =0 ;
+    int files_generated = system(command);
+    if(files_generated == -1){
+        cout<<"Failed to generate files using python"<<endl;
+    }else{
+        cout<<"File generation using python successful"<<endl;
+        pnl = strategize_MACD(x, from_date, to_date);
+    }
+    remove("MACD_stock_data.csv");
+    return pnl;
+}
 
-
+// int main(){
+//     MACD_strategy("SBIN", 5, "01/01/2023", "01/01/2024");
+//     return 0;
+// }

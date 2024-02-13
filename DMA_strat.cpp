@@ -1,55 +1,10 @@
-#include <iostream>
-#include <cstdlib>
-#include <fstream>
-#include <sstream>
-#include <vector>
-#include <cmath>
-using namespace std;
-string format_date(string date){
-    // 2022-11-30
-    string new_date="";
-    string temp = "";
-    //new format = dd/mm/yyyy
-    for(int i=date.size()-1 ; i>=0; i--){
-        if(date[i] == '-'){
-            int num = stoi(temp);
-            new_date = new_date + temp + "/";
-            temp = "";
-        }else{
-            temp = date[i] + temp;
-        }
-    }
-    new_date = new_date + temp;
-    return new_date;
-}
-void csv_parser(string file_name, vector<string> &dates, vector<float> &prices){
-    ifstream file(file_name);
-    if(!file.is_open()){
-        cout<<"Error opening the "<<file_name<<" file"<<endl;
-        return;
-    }
-    string line;
-    getline(file, line);
-    while(getline(file, line)){
-        stringstream ss(line);
-        string cell;
-        getline(ss, cell, ',');
+#include"base.h"
 
-        getline(ss, cell, ','); // take first word (date)
-        dates.push_back(format_date(cell));
-
-        getline(ss, cell, ',');
-        prices.push_back(stof(cell)); // take second word (close price)
-    }
-    file.close();
-}
-
-void strategize_DMA(int n, int x, int p)
-{
+double strategize_DMA(int n, int x, int p){
     std::cout << "the strategy here" << endl;
     vector<string> dates;
-    vector<float> prices;
-    csv_parser("stock_data.csv", dates, prices);
+    vector<double> prices;
+    csv_parser("DMA_stock_data.csv", dates, prices);
 
     ofstream file3("daily_cashflow.csv");
     ofstream file2("order_statistics.csv");
@@ -57,28 +12,28 @@ void strategize_DMA(int n, int x, int p)
     if (!file2.is_open())
     {
         std::cerr << "Error opening file" << std::endl;
-        return;
+        return 0;
     }
     if (!file3.is_open())
     {
         std::cerr << "Error opening file" << std::endl;
-        return;
+        return 0;
     }
     if (!file4.is_open())
     {
         std::cerr << "Error opening file" << std::endl;
-        return;
+        return 0;
     }
     file2 << "Date,Order_dir,Quantity,Price" << endl;
     file3 << "Date,Cashflow" << endl;
-    float balance = 0;
+    double balance = 0;
     int position = 0;
     for (int i = n - 1; i < dates.size(); i++)
     {
 
         string currdate = dates[i];
-        vector<float> tempData;                 // vector containing prices of last n days
-        float avgData = 0;                      // double for calculating average
+        vector<double> tempData;                 // vector containing prices of last n days
+        double avgData = 0;                      // double for calculating average
         int z = 0;
         for (int j = 0; true; j--)              // storing the dates and the prices
         {
@@ -96,14 +51,14 @@ void strategize_DMA(int n, int x, int p)
             z++;
         }
         avgData = avgData / 5;
-        float stDev = 0;
+        double stDev = 0;
         for (int j = 0; j < 5; j++)
         {
             stDev += (tempData[j] - avgData) * (tempData[j] - avgData);
         }
         stDev = stDev / 5;
         stDev = sqrt(stDev);
-        float diff = prices[i] - avgData - p * stDev;   
+        double diff = prices[i] - avgData - p * stDev;   
 
         if (diff >= 0)                                                  // condition for buying
         {
@@ -155,25 +110,25 @@ void strategize_DMA(int n, int x, int p)
     file2.close();
     file3.close();
     file4.close();
-    remove("stock_data.csv")
-
+    return balance;
 }
 
-// int main()
-// {
-//     int n = 5;
-//     int x = 3;
-//     int p = 1;
-//     const char *file_command = "python3 trend_strat.py symbol=SBIN n=15 x=8 p=2 from_date=01/01/2024 to_date=06/02/2024";
-//     int files_generated = system(file_command);
-//     if (file_command == 0)
-//     {
-//         std::cout << "Failed : file generation did not happen from the python file";
-//     }
-//     else
-//     {
-//         strategize(n, x, p);
-//     }
-//     // remove("trend_strat.csv");
+double DMA_strategy(string symbol, int n, int x, double p, string from_date, string to_date){
+    string comm = "python3 file_generator.py strategy=DMA symbol="+symbol+" n="+to_string(n)+" from_date="+from_date+" to_date="+to_date;
+    const char* command = comm.c_str();
+    double pnl =0;
+    int files_generated = system(command);
+    if(files_generated == -1){
+        cout<<"Failed to generate files using python"<<endl;
+    }else{
+        cout<<"File generation using python successful"<<endl;
+        pnl = strategize_DMA(n, x, p);
+    }
+    remove("DMA_stock_data.csv");
+    return pnl;
+}
+
+// int main(){
+//     DMA_strategy("SBIN",14, 5, 3, "01/01/2023", "01/01/2024");
 //     return 0;
 // }
