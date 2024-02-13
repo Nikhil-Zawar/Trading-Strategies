@@ -39,3 +39,11 @@ endif
 ifeq ($(strategy),ADX)
 ARGS += $(symbol) $(x) $(n) $(adx_threshold) $(start_date) $(end_date)
 endif
+
+ifeq ($(strategy),PAIRS)
+ARGS += $(symbol1) $(symbol2) $(x) $(n) $(threshold) $(start_date) $(end_date) $(stop_loss_threshold)
+endif
+
+ifeq ($(strategy),LINEAR_REGRESSION)
+ARGS += $(symbol) $(x) $(p) $(start_date) $(end_date) $(train_start_date) $(train_end_date)
+endif

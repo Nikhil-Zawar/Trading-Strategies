@@ -148,8 +148,7 @@ double strategize_Advanced_DMA(int n, int x, double p, double c1, double c2, int
                 holdings.erase(holdings.begin());
             }
 
-            string line = currdate + ",BUY,1," + to_string(prices[i]);
-            file2 << line << endl;
+            file2 << currdate<<",BUY,1,"<<prices[i] << endl;
             balance -= (prices[i]);
             file3 << currdate << "," << balance << endl;
             position++;
@@ -173,8 +172,7 @@ double strategize_Advanced_DMA(int n, int x, double p, double c1, double c2, int
                 holdings.erase(holdings.begin());
             }
 
-            string line = currdate + ",SELL,1," + to_string(prices[i]);
-            file2 << line << endl;
+            file2 << currdate<<",SELL,1,"<<prices[i] << endl;
             balance += (prices[i]);
             file3 << currdate << "," << balance << endl;
             position--;

@@ -7,7 +7,9 @@
 #include"RSI_strat.cpp"
 #include"unordered_map"
 #include"helper.cpp"
-
+#include "pairs.cpp"
+#include "stop_loss.cpp"
+#include "linear.cpp"
 // make strategy=BASIC symbol=SBIN n=5 x=2 start_date="b" end_date="a"
 // make strategy=DMA symbol=SBIN n=50 x=3 p=2 start_date="a" end_date="b"
 // make strategy="DMA++" symbol=SBIN x=4 p=5 n=14 max_hold_days=28 c1=2 c2=0.2 start_date="a" end_date="b"
@@ -75,8 +77,38 @@ int main(int argc, char* argv[]) {
         cout<<"best of all"<<endl;
     }else if(strategy == "LR"){
         cout<<"linear regression"<<endl;
-    }else{
+    }    
+    else if (strategy == "LINEAR_REGRESSION")
+    {
+        string symbol = argv[2];
+        int x = stoi(argv[3]);
+        double p = stod(argv[4]);
+        string train_start_date = argv[5];
+        string train_end_date = argv[6];
+        string from_date = argv[7];
+        string to_date = argv[8];
+        double linear_pnl = linear_strategy(symbol,x,p,train_start_date,train_end_date,from_date,to_date);
+    }
+    else if (strategy == "PAIRS")
+    {
+        // cout<<"here"<<endl;
+        string symbol1 = argv[2];
+        string symbol2 = argv[3];
+        int x = stoi(argv[4]);
+        int n = stoi(argv[5]);
+        double threshold = stod(argv[6]);
+        string from_date = argv[7];
+        string to_date = argv[8];
+        if (argc == 9)
+        {
+            double pair_pnl = pairs_strategy(symbol1, symbol2, x, n, threshold, from_date, to_date);
+        }
+        else
+        {
+            double stop_loss_threshold = stod(argv[9]);
 
+            double stop_loss_pnl = stop_loss_strategy(symbol1, symbol2, x, n, threshold, stop_loss_threshold, from_date, to_date);
+        }
     }
     return 0;
 }
