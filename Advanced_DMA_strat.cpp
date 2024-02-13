@@ -1,6 +1,7 @@
-#include"base.h"
+#include "base.h"
 
-double strategize_Advanced_DMA(int n, int x, double p, double c1, double c2, int max_hold_days){
+double strategize_Advanced_DMA(int n, int x, double p, double c1, double c2, int max_hold_days)
+{
     std::cout << "the strategy here" << endl;
     vector<string> dates;
     vector<double> prices;
@@ -9,15 +10,18 @@ double strategize_Advanced_DMA(int n, int x, double p, double c1, double c2, int
     ofstream file3("daily_cashflow.csv");
     ofstream file2("order_statistics.csv");
     ofstream file4("final_pnl.txt");
-    if (!file2.is_open()){
+    if (!file2.is_open())
+    {
         std::cerr << "Error opening file" << std::endl;
         return 0;
     }
-    if (!file3.is_open()){
+    if (!file3.is_open())
+    {
         std::cerr << "Error opening file" << std::endl;
         return 0;
     }
-    if (!file4.is_open()){
+    if (!file4.is_open())
+    {
         std::cerr << "Error opening file" << std::endl;
         return 0;
     }
@@ -32,9 +36,10 @@ double strategize_Advanced_DMA(int n, int x, double p, double c1, double c2, int
     double diff2; // condition for selling
     bool direct;
 
-    double SF;                    // smoothening factor
-    double AM;                      
-    for (int i = n; i < dates.size(); i++)
+    double SF; // smoothening factor
+    double AM;
+    double ER;
+    for (int i = n - 1; i < dates.size(); i++)
     {
         day++;
         string currdate = dates[i];
@@ -56,15 +61,15 @@ double strategize_Advanced_DMA(int n, int x, double p, double c1, double c2, int
                 sumPriceChange += abs(prices[i - j] - prices[i - j - 1]);
             }
             if (sumPriceChange != 0)
-            {                                                        // if denominator is not 0 then
-                double ER = changeInPrice / sumPriceChange;          // claculated Efficiency ratio
+            {                                        // if denominator is not 0 then
+                ER = changeInPrice / sumPriceChange; // claculated Efficiency ratio
                 double temp = (2 * ER) / (1 + c2);
                 SF = SF + c1 * ((temp - 1) / (temp + 1) - SF);
                 AM = AM + SF * ((prices[i]) - AM);
             }
-            else                                                    // when deno is 0 then check for max hold days and then 
+            else // when deno is 0 then check for max hold days and then
             {
-                if (holdings.size() > 0 && holdings[0].first >= day)
+                if (holdings.size() > 0 && holdings[0].first <= day)
                 {
                     direct = true;
                     if (holdings[0].second == 1) // sell
@@ -81,12 +86,12 @@ double strategize_Advanced_DMA(int n, int x, double p, double c1, double c2, int
             }
         }
 
-        if (direct !=true)
+        if (direct != true)
         {
             diff1 = prices[i] - (1 + p / 100) * AM; // for buying
             diff2 = (1 - p / 100) * AM - prices[i]; /// for selling
 
-            if (holdings.size() > 0 && holdings[0].first >= day)
+            if (holdings.size() > 0 && holdings[0].first <= day)
             {
                 if (holdings[0].second == 1)
                 {
@@ -128,12 +133,11 @@ double strategize_Advanced_DMA(int n, int x, double p, double c1, double c2, int
         }
         if (diff1 >= 0) // condition for buying
         {
-            direct=false;
+            direct = false;
             if (position >= x) // position limit
             {
                 file3 << currdate << "," << balance << endl;
                 continue;
-                ;
             }
             if (holdings.size() == 0 || holdings[0].second != -1)
             {
@@ -154,7 +158,7 @@ double strategize_Advanced_DMA(int n, int x, double p, double c1, double c2, int
 
         if (diff2 >= 0) // condition for selling
         {
-            direct=false;
+            direct = false;
             if (position <= -x) // position limit
             {
                 file3 << currdate << "," << balance << endl;
@@ -181,18 +185,7 @@ double strategize_Advanced_DMA(int n, int x, double p, double c1, double c2, int
 
     balance = balance + position * (prices.back());
 
-    if (balance < 0)
-    {
-        file4 << "Loss : " << balance << endl;
-    }
-    else if (balance > 0)
-    {
-        file4 << "Profit: " << balance << endl;
-    }
-    else
-    {
-        file4 << "No profit or loss" << endl;
-    }
+    file4 << balance << endl;
 
     file2.close();
     file3.close();
@@ -200,15 +193,19 @@ double strategize_Advanced_DMA(int n, int x, double p, double c1, double c2, int
     return balance;
 }
 
-double Advanced_DMA_strategy(string symbol, int n, int x, double p, double c1, double c2, int max_hold_days, string from_date, string to_date){
-    string comm = "python3 file_generator.py strategy=Advanced_DMA symbol="+symbol+" n="+to_string(n)+" from_date="+from_date+" to_date="+to_date;
-    const char* command = comm.c_str();
-    double pnl =0;
+double Advanced_DMA_strategy(string symbol, int n, int x, double p, double c1, double c2, int max_hold_days, string from_date, string to_date)
+{
+    string comm = "python3 file_generator.py strategy=Advanced_DMA symbol=" + symbol + " n=" + to_string(n) + " from_date=" + from_date + " to_date=" + to_date;
+    const char *command = comm.c_str();
+    double pnl = 0;
     int files_generated = system(command);
-    if(files_generated == -1){
-        cout<<"Failed to generate files using python"<<endl;
-    }else{
-        cout<<"File generation using python successful"<<endl;
+    if (files_generated == -1)
+    {
+        cout << "Failed to generate files using python" << endl;
+    }
+    else
+    {
+        cout << "File generation using python successful" << endl;
         pnl = strategize_Advanced_DMA(n, x, p, c1, c2, max_hold_days);
     }
     remove("Advanced_DMA_stock_data.csv");
@@ -219,4 +216,3 @@ double Advanced_DMA_strategy(string symbol, int n, int x, double p, double c1, d
 //     Advanced_DMA_strategy("SBIN",14, 5, 3, 2, 0.5, 7, "01/01/2023", "01/01/2024");
 //     return 0;
 // }
-
